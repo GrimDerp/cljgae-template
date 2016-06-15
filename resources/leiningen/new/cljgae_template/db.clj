@@ -1,12 +1,13 @@
 (ns {{name}}.db
-  (:require [clj-time.core :as t]
-            [clj-time.coerce :as c]
-            [clojure.tools.logging :as log])
-  (:import [com.google.appengine.api.datastore DatastoreService 
-                                               DatastoreServiceFactory 
-                                               Entity
-                                               EntityNotFoundException
-                                               KeyFactory]))
+    (:require [clj-time.core :as t]
+              [clj-time.coerce :as c]
+              [clojure.tools.logging :as log])
+    (:import [com.google.appengine.api.datastore 
+              DatastoreService 
+              DatastoreServiceFactory 
+              Entity
+              EntityNotFoundException
+              KeyFactory]))
 
 (defprotocol NdbEntity
   (save! [this] "Saves the entity")
@@ -64,16 +65,16 @@
   (let [gae-key (.getKey gae-entity)
         hm (.getProperties gae-entity)
         gae-map (apply merge (map #(hash-map (keyword %) (<-prop (get hm %))) (keys hm)))]
-      (assoc gae-map :key (if (.getName gae-key)
-                            (.getName gae-key)
-                            (.getId gae-key)))))
+    (assoc gae-map :key (if (.getName gae-key)
+                          (.getName gae-key)
+                          (.getId gae-key)))))
 
 (defn get-entity [entity-kind entity-key]
   (let [datastore (DatastoreServiceFactory/getDatastoreService)
         result (try
-                (gae-entity->map (.get datastore (make-key entity-kind entity-key)))
-                (catch EntityNotFoundException e
-                 nil))]
+                 (gae-entity->map (.get datastore (make-key entity-kind entity-key)))
+                 (catch EntityNotFoundException e
+                   nil))]
     (log/debugf "Querying %s:%s: found %s" entity-kind entity-key (pr-str result))
     result))
 
@@ -87,21 +88,21 @@
         sym (symbol name)
         empty-ent (symbol (str 'empty- name))
         creator (symbol (str  '-> name))]
-  `(do 
-    (defrecord ~name ~entity-fields
-      NdbEntity
-      (save! [this#] (save-entity '~sym this#))
-      (delete! [this#] (delete-entity '~sym (:key this#))))
+    `(do 
+       (defrecord ~name ~entity-fields
+         NdbEntity
+         (save! [this#] (save-entity '~sym this#))
+         (delete! [this#] (delete-entity '~sym (:key this#))))
 
-    (def ~empty-ent
-      ~(conj (map (constantly nil) entity-fields) creator))
+       (def ~empty-ent
+         ~(conj (map (constantly nil) entity-fields) creator))
 
-    (defn ~(symbol (str 'create- name)) ~entity-fields
-      ~(conj (seq entity-fields) creator))
+       (defn ~(symbol (str 'create- name)) ~entity-fields
+         ~(conj (seq entity-fields) creator))
 
-    (defn ~(symbol (str 'get- name)) [key#]
-      (if-let [result# (get-entity '~sym key#)]
-        (merge ~empty-ent result#)))
+       (defn ~(symbol (str 'get- name)) [key#]
+         (if-let [result# (get-entity '~sym key#)]
+           (merge ~empty-ent result#)))
 
-    (defn ~(symbol (str 'delete- name)) [key#]
-      (delete-entity '~sym key#)))))
+       (defn ~(symbol (str 'delete- name)) [key#]
+         (delete-entity '~sym key#)))))
